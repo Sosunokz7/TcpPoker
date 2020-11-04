@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Net.Sockets;
 using PokerServer.Abstrcat;
+using System.Threading.Tasks;
 
 namespace PokerServer.Client
 {
@@ -32,17 +33,22 @@ namespace PokerServer.Client
 			
 			try
 			{
-				int bytes;
-				byte[] data = new byte[256];
-				StringBuilder stringBuilder = new StringBuilder();
-				do
-				{
-					bytes = networkStream.Read(data, 0, data.Length);
-					stringBuilder.Append(Encoding.UTF8.GetString(data, 0, bytes));
-				} while (networkStream.DataAvailable);
+				Task.Factory.StartNew(()=> {
+					
+					int bytes;
+					byte[] data = new byte[256];
+					StringBuilder stringBuilder = new StringBuilder();
+					do
+					{
+						bytes = networkStream.Read(data, 0, data.Length);
+						stringBuilder.Append(Encoding.UTF8.GetString(data, 0, bytes));
+					} while (networkStream.DataAvailable);
 
 
-				return eventGetMessage?.Invoke(stringBuilder.ToString(), this);
+					return eventGetMessage?.Invoke(stringBuilder.ToString(), this);
+					
+				});
+				
 				
 			}
 			catch(Exception ex)
@@ -61,8 +67,8 @@ namespace PokerServer.Client
 			try
 			{
 				byte[] data = new byte[256];
-				data = Encoding.UTF8.GetBytes(message, 0, data.Length);
-				networkStream.Write(data, 0, data.Length);
+				data = Encoding.UTF8.GetBytes(message);
+				networkStream.Write(data);
 			}
 			catch(Exception ex)
 			{
@@ -74,7 +80,7 @@ namespace PokerServer.Client
 		{
 			try
 			{
-				serverObject.RemoveClientFromList(this.id);
+				//serverObject.RemoveClientFromList(this.id);
 				networkStream.Close();
 				tcpClient.Close();
 

@@ -24,6 +24,10 @@ namespace PokerServer
 		private List<ClientObject> clientsList = new List<ClientObject>();
 		private GameMaster roundControler;
 		public InterpreterMessage interpreter;
+
+		private double bank = 0;
+
+		private int quantityRound = 0;
 		public ServerObject()
 		{
 			interpreter = new InterpreterMessage();
@@ -44,9 +48,11 @@ namespace PokerServer
 					TcpClient tcpClient = tcpListener.AcceptTcpClient();
 					ClientObject clientObject = new ClientObject(tcpClient,this);
 					clientObject.eventGetMessage += EveInterpretate;
-					Thread thread = new Thread(() => { clientObject.GetMessage(); });
+					clientsList.Add(clientObject);
+					Task.Run(()=>{ clientObject.GetMessage(); });
+					//Thread thread = new Thread(() => { clientObject.GetMessage(); });
 					
-					thread.Start();
+					//thread.Start();
 				}
 
 			}
@@ -60,7 +66,10 @@ namespace PokerServer
 		private string EveInterpretate(string message, ClientObject client)
 		{
 			try
+			
 			{
+				Task.Run(()=>client.GetMessage());
+
 				string teg = message.Substring(0, message.IndexOf(';'));
 				message = message.Remove(0, message.IndexOf(';') + 1);
 				switch (teg)
@@ -87,6 +96,7 @@ namespace PokerServer
 							double rat = Math.Round(double.Parse(message), 2);
 							client.rate += rat;
 							client.many -= rat;
+							bank += rat;
 							if (clientsList.Last().id == client.id)
 								NextRound();
 							break;
@@ -108,11 +118,6 @@ namespace PokerServer
 		}
 		
 		
-		internal void RemoveClientFromList(string id)
-		{
-			Task.Factory.StartNew(() => { clientsList.RemoveAll((obj) => obj.id == id); });
-			
-		}
 		internal void AddClient(ClientObject clientObject)
 		{
 			clientsList.Add(clientObject);
@@ -159,15 +164,45 @@ namespace PokerServer
 				roundControler.NewRaund();
 				for (int i = 0; i != 3; i++)
 				{
-					NotifyAllUser(roundControler.TakeOneCard());
+					string card = roundControler.TakeOneCard();
+					foreach (var client in clientsList)
+					{
+						
+						client.cartInHand.Add(card);
+					}
+					NotifyAllUser(card);
 				}
 			}
 
 		}
-
 		internal void NextRound()
 		{
+			++quantityRound;
+			if(quantityRound==5)
+			{
+				var viner=roundControler.EndRaunt();
+				foreach(var client in clientsList)
+				{
+					foreach(var viners in viner)
+					{
+						if (client.id == viners.id)
+						{
+							bank /= viner.Count;
+							client.many += bank;
+							
+						}
+					}
+					client.rate = 0;
+					client.SendMessage($"Many>{client.many}");
+				}
+
+				bank = 0;
+				Play();
+				return;
+			}
+
 			NotifyAllUser(roundControler.TakeOneCard());
+
 		}
 
 	}

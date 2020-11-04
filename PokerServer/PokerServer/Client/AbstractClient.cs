@@ -16,9 +16,10 @@ namespace PokerServer.Abstrcat
 		private double _rate = 0d;
 		internal double rate { get { return Math.Round(_rate, 2); } set { _rate += value; } }
 
+		internal int numCombination { get; set; }
+		internal int maxCardInCombination { get; set; }
 
-
-		internal List<string> cartInHand;
+		internal List<string> cartInHand = new List<string>();
 		internal NetworkStream networkStream { get; private set; }
 
 		private ServerObject serverObject;
